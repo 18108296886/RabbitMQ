@@ -17,9 +17,10 @@
 
 -export_type([frame/0]).
 
--type frame_type() :: ?FRAME_METHOD | ?FRAME_HEADER | ?FRAME_BODY |
-                      ?FRAME_OOB_METHOD | ?FRAME_OOB_HEADER | ?FRAME_OOB_BODY |
-                      ?FRAME_TRACE | ?FRAME_HEARTBEAT.
+-type frame_type() :: ?FRAME_METHOD | ?FRAME_HEADER | ?FRAME_BODY
+                      % ?FRAME_OOB_METHOD | ?FRAME_OOB_HEADER | ?FRAME_OOB_BODY |
+                      % ?FRAME_TRACE
+                      | ?FRAME_HEARTBEAT.
 -type protocol()   :: rabbit_framing:protocol().
 -type method()     :: rabbit_framing:amqp_method_record().
 -type class_id()   :: rabbit_framing:amqp_class_id().
@@ -69,10 +70,10 @@ init(Protocol) -> {ok, {method, Protocol}}.
 
 process({method, MethodName, FieldsBin}, {method, Protocol}) ->
     try
-        Method = Protocol:decode_method_fields(MethodName, FieldsBin),
-        case Protocol:method_has_content(MethodName) of
-            true  -> {ClassId, _MethodId} = Protocol:method_id(MethodName),
-                     {ok, {content_header, Method, ClassId, Protocol}};
+        Method = rabbit_framing_amqp_0_9_1:decode_method_fields(MethodName, FieldsBin),
+        case  rabbit_framing_amqp_0_9_1:method_has_content(MethodName) of
+            true  -> {ClassId, _MethodId} = rabbit_framing_amqp_0_9_1:method_id(MethodName),
+                     {ok, {content_header, Method, ClassId, rabbit_framing_amqp_0_9_1}};
             false -> {ok, Method, {method, Protocol}}
         end
     catch exit:#amqp_error{} = Reason -> {error, Reason}
