@@ -1,16 +1,8 @@
 load("@rules_erlang//:erlang_bytecode2.bzl", "erlang_bytecode")
 load(
     "//:rabbitmq.bzl",
-    "BROKER_VERSION_REQUIREMENTS_ANY",
     "rabbitmq_app",
 )
-
-# gazelle:erlang_generate_beam_files_macro false
-# gazelle:erlang_always_generate_test_beam_files
-# gazelle:erlang_skip_rules assert_suites2,xref,plt,dialyze
-
-# gazelle:erlang_app_dep rabbit_common
-# gazelle:erlang_app_dep rabbit
 
 erlang_bytecode(
     name = "other_beam",
@@ -85,6 +77,8 @@ filegroup(
         ":srcs",
     ],
 )
+
+BROKER_VERSION_REQUIREMENTS_ANY = "{broker_version_requirements, []}"
 
 rabbitmq_app(
     name = "erlang_app",
