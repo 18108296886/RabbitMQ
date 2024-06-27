@@ -42,7 +42,7 @@
          %% stateful client API
          new/2,
          consume/3,
-         cancel/5,
+         cancel/3,
          handle_down/4,
          handle_event/3,
          module/2,
@@ -115,7 +115,8 @@
 -opaque state() :: #?STATE{}.
 
 %% Delete atom 'credit_api_v1' when feature flag credit_api_v2 becomes required.
--type consume_mode() :: {simple_prefetch, non_neg_integer()} | {credited, Initial :: delivery_count() | credit_api_v1}.
+-type consume_mode() :: {simple_prefetch, Prefetch :: non_neg_integer()} |
+                        {credited, Initial :: delivery_count() | credit_api_v1}.
 -type consume_spec() :: #{no_ack := boolean(),
                           channel_pid := pid(),
                           limiter_pid => pid() | none,
@@ -125,7 +126,11 @@
                           exclusive_consume => boolean(),
                           args => rabbit_framing:amqp_table(),
                           ok_msg := term(),
-                          acting_user :=  rabbit_types:username()}.
+                          acting_user := rabbit_types:username()}.
+-type cancel_spec() :: #{consumer_tag := rabbit_types:ctag(),
+                         reason => cancel | remove,
+                         ok_msg => term(),
+                         user := rabbit_types:username()}.
 
 -type delivery_options() :: #{correlation => correlation(),
                               atom() => term()}.
@@ -135,6 +140,7 @@
 -export_type([state/0,
               consume_mode/0,
               consume_spec/0,
+              cancel_spec/0,
               delivery_options/0,
               credit_reply_action/0,
               action/0,
@@ -182,7 +188,8 @@
 -callback is_stateful() -> boolean().
 
 %% intitialise and return a queue type specific session context
--callback init(amqqueue:amqqueue()) -> {ok, queue_state()} | {error, Reason :: term()}.
+-callback init(amqqueue:amqqueue()) ->
+    {ok, queue_state()} | {error, Reason :: term()}.
 
 -callback close(queue_state()) -> ok.
 %% update the queue type state from amqqrecord
@@ -196,9 +203,7 @@
     {protocol_error, Type :: atom(), Reason :: string(), Args :: term()}.
 
 -callback cancel(amqqueue:amqqueue(),
-                 rabbit_types:ctag(),
-                 term(),
-                 rabbit_types:username(),
+                 cancel_spec(),
                  queue_state()) ->
     {ok, queue_state()} | {error, term()}.
 
@@ -501,17 +506,15 @@ consume(Q, Spec, State) ->
             Err
     end.
 
-%% TODO switch to cancel spec api
+%% TODO: switch to cancel spec api
 -spec cancel(amqqueue:amqqueue(),
-             rabbit_types:ctag(),
-             term(),
-             rabbit_types:username(),
+             cancel_spec(),
              state()) ->
     {ok, state()} | {error, term()}.
-cancel(Q, Tag, OkMsg, ActiveUser, Ctxs) ->
+cancel(Q, Spec, Ctxs) ->
     #ctx{state = State0} = Ctx = get_ctx(Q, Ctxs),
     Mod = amqqueue:get_type(Q),
-    case Mod:cancel(Q, Tag, OkMsg, ActiveUser, State0) of
+    case Mod:cancel(Q, Spec, State0) of
         {ok, State} ->
             {ok, set_ctx(Q, Ctx#ctx{state = State}, Ctxs)};
         Err ->
