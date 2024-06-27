@@ -12,7 +12,7 @@
 -behaviour(rabbit_peer_discovery_backend).
 
 -export([init/0, list_nodes/0, supports_registration/0, register/0, unregister/0,
-         post_registration/0, lock/1, unlock/1, send_event/3, generate_v1_event/7]).
+         post_registration/0, lock/1, unlock/1]).
 
 -define(DELEGATE, rabbit_peer_discovery_k8s).
 
@@ -23,8 +23,8 @@
 init() ->
     ?DELEGATE:init().
 
--spec list_nodes() -> {ok, {Nodes :: list(), NodeType :: rabbit_types:node_type()}} |
-                      {error, Reason :: string()}.
+-spec list_nodes() -> {ok, {Nodes :: [node()] | node(), NodeType :: rabbit_types:node_type()}} | {error, Reason :: string()}.
+
 list_nodes() ->
     ?DELEGATE:list_nodes().
 
@@ -51,13 +51,3 @@ lock(Node) ->
 -spec unlock({{ResourceId :: string(), LockRequestedId :: atom()}, Nodes :: [atom()]}) -> 'ok'.
 unlock(Data) ->
     ?DELEGATE:unlock(Data).
-
-generate_v1_event(Namespace, Name, Type, Message, Reason, Timestamp, HostName) ->
-    ?DELEGATE:generate_v1_event(Namespace, Name, Type, Message, Reason, Timestamp, HostName).
-
-%% @doc Perform a HTTP POST request to K8s to send and k8s v1.Event
-%% @end
-%%
--spec send_event(term(),term(), term()) -> {ok, term()} | {error, term()}.
-send_event(Type, Reason, Message) ->
-    ?DELEGATE:send_event(Type, Reason, Message).
